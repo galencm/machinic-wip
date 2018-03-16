@@ -9,7 +9,7 @@ import uuid
 import functools
 import io
 
-def project_dimensions(project, width=200, height=200, scale=1, filename=None):
+def project_dimensions(project, width=200, height=200, scale=1, background_color=(155, 155, 155, 255), filename=None):
     x_offset = 10
     y_offset = 10
     drawn_x = 0
@@ -47,7 +47,7 @@ def project_dimensions(project, width=200, height=200, scale=1, filename=None):
     if height < (needed_height):
         height = int(needed_height)
 
-    dimensions_image = PILImage.new('RGB', (width, height), (155, 155, 155, 255))
+    dimensions_image = PILImage.new('RGB', (width, height), background_color)
     draw = ImageDraw.Draw(dimensions_image, 'RGBA')
 
     # landscape layout, use drawn_x to increment figures
@@ -103,7 +103,7 @@ def vertical_texture(draw, spacing, top, height, width):
     for space in range(0, width, round(width / spacing)):
         draw.line((space, top, space, top + height), width=2, fill=(255, 255, 255, 128))
 
-def project_overview(project, width, height, filename=None, orientation='horizontal', step_offset=0, background_palette_field="", texturing=None, coloring=None, color_key=False):
+def project_overview(project, width, height, filename=None, orientation='horizontal', step_offset=0, background_palette_field="", texturing=None, coloring=None, color_key=False, background_color=(155, 155, 155, 255)):
     # the lattice ui uses a sequence broken into 
     # blocks of images for the accordion view
     #
@@ -167,7 +167,7 @@ def project_overview(project, width, height, filename=None, orientation='horizon
     else:
         color_key_padding = 0
 
-    overview_image = PILImage.new('RGB', (width, height + color_key_padding), (155, 155, 155, 255))
+    overview_image = PILImage.new('RGB', (width, height + color_key_padding), background_color)
     draw = ImageDraw.Draw(overview_image, 'RGBA')
 
     print(coloring)
