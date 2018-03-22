@@ -170,7 +170,7 @@ def project_overview(project, width, height, filename=None, orientation='horizon
     overview_image = PILImage.new('RGB', (width, height + color_key_padding), background_color)
     draw = ImageDraw.Draw(overview_image, 'RGBA')
 
-    print(coloring)
+    # print(coloring)
     draw_stack = []
     # use to label start and end of sequences
     last_step = False
@@ -200,7 +200,7 @@ def project_overview(project, width, height, filename=None, orientation='horizon
                             else:
                                 color = coloring[k]['fill']
                         except Exception as ex:
-                            print(ex)
+                            # print(ex)
                             color = coloring['*']['fill']
 
                         try:
@@ -273,7 +273,7 @@ def project_overview(project, width, height, filename=None, orientation='horizon
             color_name = str(color_name)
             text = draw.text((x_start + color_block_size, y_start), color_name)
             text_width = draw.textsize(color_name)[0]
-            print(y_start, height, color_key_padding)
+            # print(y_start, height, color_key_padding)
             key_width = text_width + color_block_size + horizontal_padding
             if x_start + key_width > width:
                 y_start += key_offset * 3
