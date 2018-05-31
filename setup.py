@@ -11,5 +11,5 @@ name="ma_wip",
     data_files = [("", ["LICENSE.txt"])],
     url="",
     packages=find_packages(),
-    install_requires=['Pillow'],
+    install_requires=['Pillow', 'attrs', 'colour'],
 )
