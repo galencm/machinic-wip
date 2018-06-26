@@ -318,8 +318,12 @@ def rules(rules, groups=None, width=200, height=200, scale=1, background_color=(
     for rule in rules:
         rule_imgs.append(draw_rule(rule, groups))
 
-    width = max([rule.width for rule in rule_imgs])
-    height = sum([rule.height for rule in rule_imgs])
+    try:
+        width = max([rule.width for rule in rule_imgs])
+        height = sum([rule.height for rule in rule_imgs])
+    except ValueError:
+        pass
+
     img = PILImage.new('RGB', (width, height), background_color)
 
     # draw = ImageDraw.Draw(img, 'RGBA')
