@@ -4,7 +4,7 @@
 #
 # Copyright (c) 2018, Galen Curwen-McAdams
 
-from PIL import Image as PILImage, ImageDraw, ImageColor
+from PIL import Image as PILImage, ImageDraw, ImageColor, ImageFont
 import uuid
 import functools
 import io
@@ -293,3 +293,155 @@ def project_overview(project, width, height, filename=None, orientation='horizon
     file.seek(0)
 
     return (filename, file)
+
+def rules(rules, groups=None, width=200, height=200, scale=1, background_color=(155, 155, 155, 255), filename=None):
+    # current and future notes:
+    #
+    # This function and the function it calls, rules both take
+    # lists of rules and groups objects which are then parsed
+    # to construct the image(s)
+    # this works for dss, but not necessarily other programs
+    # a more robust method is probably to accept and parse
+    # xml which dss-ui already emits
+    #
+    # the layout of the image also makes some assumptions
+    # associated with it's creation in relation to dss
+    # such as visualizing the source_field as a group region
+    # which maps to boook scanning, but other uses of ruleling
+    # may use different source_fields and different
+    # doman-specific visualizations
+    #
+    # some rule objects from dss:
+    # [Rule(source_field='center', comparator_symbol='is', comparator_params=['int'], dest_field='chapter', rule_result='bar', rough_amount=0)]
+    # [Rule(source_field='left_corner', comparator_symbol='between', comparator_params=['6', '10'], dest_field='chapter', rule_result='bar', rough_amount=0)]
+    rule_imgs = []
+    for rule in rules:
+        rule_imgs.append(draw_rule(rule, groups))
+
+    width = max([rule.width for rule in rule_imgs])
+    height = sum([rule.height for rule in rule_imgs])
+    img = PILImage.new('RGB', (width, height), background_color)
+
+    # draw = ImageDraw.Draw(img, 'RGBA')
+    y_offset = 0
+    for rule_img in rule_imgs:
+        img.paste(rule_img, (0, y_offset))
+        y_offset += rule_img.height
+    #img.show()
+
+    if filename:
+        image_filename = '/tmp/{}.jpg'.format(str(uuid.uuid4()))
+        img.save(image_filename)
+        filename = image_filename
+
+    file = io.BytesIO()
+    extension = 'JPEG'
+    img.save(file, extension)
+    img.close()
+    file.seek(0)
+
+    return (filename, file)
+
+def draw_rule(rule, groups=None, width=400, height=200, scale=1, background_color=(155, 155, 155, 255)):
+
+    # nested functions using some variables from draw_rule scope
+    def middle(value):
+        return int(value / 2)
+
+    def above_field(text, font):
+        text = str(text)
+        text_width, text_height = draw.textsize(text, font=font)
+        return (field_x + middle(field_width) - middle(text_width), field_y + 0 - text_height)
+
+    def below_field(text, font):
+        text = str(text)
+        text_width, text_height = draw.textsize(text, font=font)
+        return (field_x + middle(field_width) - middle(text_width), field_y + field_height)
+
+    def left_field(text, font):
+        text = str(text)
+        text_width, text_height = draw.textsize(text, font=font)
+        print(text, text_width)
+        return (field_x - text_width, field_y + middle(field_height))
+
+    def right_field(text, font):
+        text = str(text)
+        text_width, text_height = draw.textsize(text, font=font)
+        return (field_x + field_width, field_y + middle(field_height))
+
+    def far_left_field(text, font):
+        text = str(text)
+        text_width, text_height = draw.textsize(text, font=font)
+        return (0, field_y + middle(field_height))
+
+    img = PILImage.new('RGB', (width, height), background_color)
+    draw = ImageDraw.Draw(img, 'RGBA')
+
+    # set defaults
+    rescale_group = .15
+    field_x = 250
+    field_y = 25
+    color = "white"
+    border_color = "black"
+    text_color = "black"
+    subtle_text_color = "lightgray"
+
+    field_width = 50
+    field_height = 100
+    field_highlight = None
+    field_highlight_color = None
+
+    if groups:
+        for group in groups:
+            if group.name == rule.source_field:
+                field_width = group.source_dimensions_scaled[0] * rescale_group
+                field_height = group.source_dimensions_scaled[1] * rescale_group
+                field_highlight = [ coord * rescale_group for coord in group.regions[0]]
+                field_highlight[0] += field_x
+                field_highlight[2] += field_x
+                field_highlight[1] += field_y
+                field_highlight[3] += field_y
+
+                # group object group coords use kivy coordinate system
+                # see note in rules about using xml
+                w = abs(field_highlight[0] - field_highlight[2])
+                h = abs(field_highlight[1] - field_highlight[3])
+
+                field_highlight[0] -= w
+                field_highlight[2] -= w
+
+                field_highlight[1] += field_height - h
+                field_highlight[3] += field_height - h
+
+                field_highlight_color = group.color.hex_l
+
+    try:
+        font = ImageFont.truetype("DejaVuSerif-Bold.ttf", 20)
+    except:
+        font = None
+
+    draw.text(above_field(rule.source_field, font), str(rule.source_field), font=font, fill=subtle_text_color)
+    draw.rectangle((field_x, field_y, field_x + field_width, field_y + field_height), outline=border_color, fill=color)
+
+    try:
+        # pillow is picky about strings, str() to be sure
+        horizontal_text = "{} {}".format(rule.dest_field, rule.rule_result)
+        draw.text(far_left_field(horizontal_text, font), str(horizontal_text), font=font, fill=text_color)
+        draw.text(below_field(rule.comparator_symbol, font), str(rule.comparator_symbol), font=font, fill=text_color)
+
+        draw.text(left_field(rule.comparator_params[0], font), str(rule.comparator_params[0]), font=font, fill=text_color)
+        draw.text(right_field(rule.comparator_params[1], font), str(rule.comparator_params[1]), font=font, fill=text_color)
+        try:
+            draw.rectangle(field_highlight, fill=field_highlight_color)
+        except:
+            pass
+        # img.show()
+    except Exception as ex:
+        print(ex)
+        pass
+
+    # img.close()
+    return img
+
+def groups(project, width=200, height=200, scale=1, background_color=(155, 155, 155, 255), filename=None):
+    pass
