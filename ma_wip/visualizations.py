@@ -294,6 +294,137 @@ def project_overview(project, width, height, filename=None, orientation='horizon
 
     return (filename, file)
 
+# def groups_overlay(groups, width=200, height=200, scale=1, background_color=(155, 155, 155, 255), filename=None):
+#     # all groups on a single image
+#     pass
+
+def groups(groups, width=200, height=200, scale=1, background_color=(155, 155, 155, 255), filename=None):
+    group_imgs = []
+    for group in groups:
+        group_imgs.append(draw_group(group))
+
+    try:
+        width = max([group.width for group in group_imgs])
+        height = sum([group.height for group in group_imgs])
+    except ValueError:
+        pass
+
+    img = PILImage.new('RGB', (width, height), background_color)
+
+    # draw = ImageDraw.Draw(img, 'RGBA')
+    y_offset = 0
+    for group_img in group_imgs:
+        img.paste(group_img, (0, y_offset))
+        y_offset += group_img.height
+    #img.show()
+
+    if filename:
+        image_filename = '/tmp/{}.jpg'.format(str(uuid.uuid4()))
+        img.save(image_filename)
+        filename = image_filename
+
+    file = io.BytesIO()
+    extension = 'JPEG'
+    img.save(file, extension)
+    img.close()
+    file.seek(0)
+
+    return (filename, file)
+
+def draw_group(group, width=400, height=200, scale=1, background_color=(155, 155, 155, 255)):
+
+    def middle(value):
+        return int(value / 2)
+
+    def above_field(text, font):
+        text = str(text)
+        text_width, text_height = draw.textsize(text, font=font)
+        return (field_x + middle(field_width) - middle(text_width), field_y + 0 - text_height)
+
+    def below_field(text, font):
+        text = str(text)
+        text_width, text_height = draw.textsize(text, font=font)
+        return (field_x + middle(field_width) - middle(text_width), field_y + field_height)
+
+    def left_field(text, font):
+        text = str(text)
+        text_width, text_height = draw.textsize(text, font=font)
+        print(text, text_width)
+        return (field_x - text_width, field_y + middle(field_height))
+
+    def right_field(text, font):
+        text = str(text)
+        text_width, text_height = draw.textsize(text, font=font)
+        return (field_x + field_width, field_y + middle(field_height))
+
+    def far_left_field(text, font):
+        text = str(text)
+        text_width, text_height = draw.textsize(text, font=font)
+        return (0, field_y + middle(field_height))
+
+    img = PILImage.new('RGB', (width, height), background_color)
+    draw = ImageDraw.Draw(img, 'RGBA')
+
+    # set defaults
+    rescale_group = .15
+    field_x = 250
+    field_y = 25
+    color = "white"
+    border_color = "black"
+    text_color = "black"
+    subtle_text_color = "lightgray"
+
+    field_width = 50
+    field_height = 100
+    field_highlight = None
+    field_highlight_color = None
+    print("????",group)
+    try:
+        field_width = group.source_dimensions_scaled[0] * rescale_group
+        field_height = group.source_dimensions_scaled[1] * rescale_group
+        field_highlight = [ coord * rescale_group for coord in group.regions[0]]
+        field_highlight[0] += field_x
+        field_highlight[2] += field_x
+        field_highlight[1] += field_y
+        field_highlight[3] += field_y
+
+        # group object group coords use kivy coordinate system
+        # see note in rules about using xml
+        w = abs(field_highlight[0] - field_highlight[2])
+        h = abs(field_highlight[1] - field_highlight[3])
+
+        field_highlight[0] -= w
+        field_highlight[2] -= w
+
+        field_highlight[1] += field_height - h
+        field_highlight[3] += field_height - h
+
+        field_highlight_color = group.color.hex_l
+    except Exception as ex:
+        pass
+    try:
+        font = ImageFont.truetype("DejaVuSerif-Bold.ttf", 20)
+    except:
+        font = None
+
+    draw.rectangle((field_x, field_y, field_x + field_width, field_y + field_height), outline=border_color, fill=color)
+
+    try:
+        # pillow is picky about strings, str() to be sure
+        draw.text(far_left_field(str(group.name), font), str(group.name), font=font, fill=field_highlight_color)
+        try:
+            draw.rectangle(field_highlight, fill=field_highlight_color)
+        except:
+            pass
+        # img.show()
+    except Exception as ex:
+        print(ex)
+        pass
+
+    # img.close()
+    return img
+
+
 def rules(rules, groups=None, width=200, height=200, scale=1, background_color=(155, 155, 155, 255), filename=None):
     # current and future notes:
     #
@@ -446,6 +577,3 @@ def draw_rule(rule, groups=None, width=400, height=200, scale=1, background_colo
 
     # img.close()
     return img
-
-def groups(project, width=200, height=200, scale=1, background_color=(155, 155, 155, 255), filename=None):
-    pass
